@@ -22,6 +22,7 @@
 #include <string_view>
 #include <vector>
 
+#include "absl/base/macros.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
@@ -62,7 +63,24 @@ class InterpreterEvents {
   std::vector<std::string> GetTraceMessageStrings() const;
   std::vector<std::string> GetAssertMessages() const;
 
-  void Clear() { proto_.Clear(); }
+  bool HasTraces() const { return !proto_.trace_msgs().empty(); }
+  bool HasAsserts() const { return !proto_.assert_msgs().empty(); }
+  bool IsEmpty() const { return !HasTraces() && !HasAsserts(); }
+
+  void Clear() {
+    if (!IsEmpty()) {
+      proto_.Clear();
+    }
+  }
+
+  // Convert captured events into a result status, returning a failure when an
+  // assertion has been raised.
+  absl::Status ToStatus() const {
+    if (!HasAsserts()) {
+      return absl::OkStatus();
+    }
+    return ToStatusSlow();
+  }
 
   bool operator==(const InterpreterEvents& other) const;
 
@@ -84,6 +102,8 @@ class InterpreterEvents {
   }
 
  private:
+  absl::Status ToStatusSlow() const;
+
   EvaluatorEventsProto proto_;
 };
 
@@ -94,7 +114,12 @@ inline std::ostream& operator<<(std::ostream& os,
 
 // Convert an InterpreterEvents structure into a result status, returning
 // a failure when an assertion has been raised.
-absl::Status InterpreterEventsToStatus(const InterpreterEvents& events);
+[[deprecated("Use InterpreterEvents::ToStatus() instead.")]]
+ABSL_REFACTOR_INLINE inline absl::Status InterpreterEventsToStatus(
+    const InterpreterEvents& events) {
+  return events.ToStatus();
+}
+
 template <typename ValueT>
 struct InterpreterResult {
   ValueT value;
@@ -106,7 +131,7 @@ struct InterpreterResult {
 template <typename ValueT>
 absl::StatusOr<ValueT> InterpreterResultToStatusOrValue(
     const InterpreterResult<ValueT>& result) {
-  absl::Status status = InterpreterEventsToStatus(result.events);
+  absl::Status status = result.events.ToStatus();
 
   if (!status.ok()) {
     return status;
