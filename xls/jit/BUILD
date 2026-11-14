@@ -785,13 +785,15 @@ cc_library(
     srcs = ["jit_runtime.cc"],
     hdrs = ["jit_runtime.h"],
     deps = [
-        ":llvm_type_converter",
+        ":type_buffer_metadata",
         "//xls/common:bits_util",
         "//xls/common:math_util",
         "//xls/ir:bits",
         "//xls/ir:type",
         "//xls/ir:value",
         "@abseil-cpp//absl/base:core_headers",
+        "@abseil-cpp//absl/base:no_destructor",
+        "@abseil-cpp//absl/container:flat_hash_map",
         "@abseil-cpp//absl/log",
         "@abseil-cpp//absl/log:check",
         "@abseil-cpp//absl/status",
@@ -804,6 +806,25 @@ cc_library(
         "@llvm-project//llvm:Support",
         "@llvm-project//llvm:X86AsmParser",  # build_cleaner: keep
         "@llvm-project//llvm:X86CodeGen",  # build_cleaner: keep
+    ],
+)
+
+cc_test(
+    name = "jit_runtime_test",
+    srcs = ["jit_runtime_test.cc"],
+    deps = [
+        ":jit_runtime",
+        "//xls/common:bits_util",
+        "//xls/common:math_util",
+        "//xls/common:xls_gunit_main",
+        "//xls/common/status:matchers",
+        "//xls/ir",
+        "//xls/ir:bits",
+        "//xls/ir:type",
+        "//xls/ir:value",
+        "@abseil-cpp//absl/types:span",
+        "@googletest//:gtest",
+        "@llvm-project//llvm:ir_headers",
     ],
 )
 
